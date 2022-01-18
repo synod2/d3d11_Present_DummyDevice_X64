@@ -15,7 +15,11 @@ DWORD HookMain() {
     }
 
     //dummy device hooking
-    d3dhelper::GetD3D11Device(dtable, sizeof(dtable));
+    if (!d3dhelper::GetD3D11Device(dtable, sizeof(dtable)))
+    {
+        DLogs(0, "Create Dummy Device Fail");
+        return 0;
+    }
     DWORD64 pPresent = (DWORD64)dtable[8];
 
     cout << "pPresent : " << setbase(16) << pPresent << endl;

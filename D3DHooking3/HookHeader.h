@@ -8,16 +8,16 @@
 #define DLogs(x,...) { if(x) {printf("========"); printf(__VA_ARGS__); printf("=========\n"); } else {printf(__VA_ARGS__); printf("\n");} }
 
 // d3d11 related object ptrs
-ID3D11Device* pDevice = nullptr;
-IDXGISwapChain* pSwapchain = nullptr;
-ID3D11DeviceContext* pContext = nullptr;
-ID3D11RenderTargetView* pRenderTargetView = nullptr;
-ID3D11VertexShader* pVertexShader = nullptr;
-ID3D11InputLayout* pVertexLayout = nullptr;
-ID3D11PixelShader* pPixelShader = nullptr;
-ID3D11Buffer* pVertexBuffer = nullptr;
-ID3D11Buffer* pIndexBuffer = nullptr;
-ID3D11Buffer* pConstantBuffer = nullptr;
+ID3D11Device* pDevice = NULL;
+IDXGISwapChain* pSwapchain = NULL;
+ID3D11DeviceContext* pContext = NULL;
+ID3D11RenderTargetView* pRenderTargetView = NULL;
+ID3D11VertexShader* pVertexShader = NULL;
+ID3D11InputLayout* pVertexLayout = NULL;
+ID3D11PixelShader* pPixelShader = NULL;
+ID3D11Buffer* pVertexBuffer = NULL;
+ID3D11Buffer* pIndexBuffer = NULL;
+ID3D11Buffer* pConstantBuffer = NULL;
 
 void* dtable[18];
 using namespace std;
@@ -27,26 +27,38 @@ tPresent oPresent = NULL;
 
 namespace d3dhelper {
 	bool GetD3D11Device(void** pTable, size_t Size) {
-		D3D_FEATURE_LEVEL featLevel;
-
+		DLogs(1, "Initialize Dummy Device");
+		
 		//CreateDevice Options
-		DXGI_SWAP_CHAIN_DESC sd{ 0 };
+		D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+		DXGI_SWAP_CHAIN_DESC sd;
 		sd.BufferCount = 1;
-		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		sd.BufferDesc.Height = 800;
-		sd.BufferDesc.Width = 600;
-		sd.BufferDesc.RefreshRate = { 60, 1 };
+		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		sd.OutputWindow = GetForegroundWindow();
-		sd.Windowed = TRUE;
-		sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 		sd.SampleDesc.Count = 1;
-		sd.SampleDesc.Quality = 0;
+		sd.Windowed = TRUE;
+		sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+		sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+		sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+		/*sd.SampleDesc.Quality = 0;
+		sd.BufferDesc.RefreshRate = { 60,};*/
 
 		//Create Dummy Device
-		HRESULT ddc = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_REFERENCE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &sd, &pSwapchain, &pDevice, &featLevel, nullptr);
-		if (FAILED(ddc))
-			return false;
+		HRESULT ddc = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, NULL, &featureLevel, 1, D3D11_SDK_VERSION,
+			&sd, &pSwapchain, &pDevice, NULL, &pContext);
+		if (FAILED(ddc)) {
+			sd.Windowed = FALSE;
+			DLogs(0, "try Window mode..");
+			ddc = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_REFERENCE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, 
+				&sd, &pSwapchain, &pDevice, NULL, &pContext);
+			if (FAILED(ddc))
+			{
+				DLogs(0, "CreateDevice Error %0lx", ddc);
+				return false;
+			}
+		}
+			
 
 		memcpy(pTable, *reinterpret_cast<void***>(pSwapchain), Size);
 
