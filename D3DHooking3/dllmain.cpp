@@ -1,8 +1,9 @@
 ﻿// dllmain.cpp : DLL 애플리케이션의 진입점을 정의합니다.
-#include "pch.h"
 #include "HookHeader.h"
 
-DWORD HookMain() {
+const LPCWSTR AppWindowTitle = L"FpsProject";
+
+DWORD HookMain(HMODULE hModule) {
     FILE* pFile = nullptr;
     if (AllocConsole()) {
         freopen_s(&pFile, "CONIN$", "rb", stdin);
@@ -24,14 +25,16 @@ DWORD HookMain() {
 
     cout << "pPresent : " << setbase(16) << pPresent << endl;
     
-    /*if (oPresent) {
-        oPresent = (tPresent)hook::hookTramp(pPresent, (DWORD64)hook::hEndScene, 18);
+    if (pPresent) {
+        oPresent = (tPresent)hook::hookTramp(pPresent, (DWORD64)hook::hPresent, 12);
     }
-
+    
     if (!oPresent)
     {
-        DLogs(0, "EndScene Hook Fail");
-    }*/
+        DLogs(0, "Present Hook Fail");
+    }
+    g_hWnd = (HWND)FindWindow(0, AppWindowTitle);
+    g_hModule = hModule;
 
     return 0;
 }

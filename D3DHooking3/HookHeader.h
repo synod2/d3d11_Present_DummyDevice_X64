@@ -1,11 +1,20 @@
 #pragma once
-#include <windows.h>
-#include <d3d11.h>
-#include <stdio.h>
-#include <iostream>
+#include "framework.h"
 #include <iomanip>
+#include <DXGI.h>
+#include <iostream>
+#include <d3d11.h>
+
 
 #define DLogs(x,...) { if(x) {printf("========"); printf(__VA_ARGS__); printf("=========\n"); } else {printf(__VA_ARGS__); printf("\n");} }
+
+//imgui related object ptrs
+static HWND                     g_hWnd = nullptr;
+static HMODULE					g_hModule = nullptr;
+static ID3D11Device* g_pd3dDevice = nullptr;
+static ID3D11DeviceContext* g_pd3dContext = nullptr;
+static IDXGISwapChain* g_pSwapChain = nullptr;
+static std::once_flag           g_isInitialized;
 
 // d3d11 related object ptrs
 ID3D11Device* pDevice = NULL;
@@ -24,6 +33,10 @@ using namespace std;
 
 typedef HRESULT(APIENTRY* tPresent)(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags);
 tPresent oPresent = NULL;
+void Render();
+
+//ImGui Menu Definitnion
+const int OpenMenuKey = VK_F9;
 
 namespace d3dhelper {
 	bool GetD3D11Device(void** pTable, size_t Size) {
@@ -31,6 +44,7 @@ namespace d3dhelper {
 		
 		//CreateDevice Options
 		D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+		D3D_FEATURE_LEVEL obtainedLevel;
 		DXGI_SWAP_CHAIN_DESC sd;
 		sd.BufferCount = 1;
 		sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -45,13 +59,13 @@ namespace d3dhelper {
 		sd.BufferDesc.RefreshRate = { 60,};*/
 
 		//Create Dummy Device
-		HRESULT ddc = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, NULL, &featureLevel, 1, D3D11_SDK_VERSION,
+		HRESULT ddc = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, &featureLevel, 1, D3D11_SDK_VERSION,
 			&sd, &pSwapchain, &pDevice, NULL, &pContext);
 		if (FAILED(ddc)) {
 			sd.Windowed = FALSE;
 			DLogs(0, "try Window mode..");
 			ddc = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_REFERENCE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, 
-				&sd, &pSwapchain, &pDevice, NULL, &pContext);
+				&sd, &pSwapchain, &pDevice, &obtainedLevel, &pContext);
 			if (FAILED(ddc))
 			{
 				DLogs(0, "CreateDevice Error %0lx", ddc);
@@ -72,11 +86,17 @@ namespace d3dhelper {
 }
 
 namespace hook {
-	HRESULT APIENTRY hEndScene(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags) {
-		DLogs(0, "Hook Successful!");
+	HRESULT APIENTRY hPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags) {
+		/*Render();*/
+		pThis->GetDevice(__uuidof(g_pd3dDevice), reinterpret_cast<void**>(&g_pd3dDevice));
+		g_pd3dDevice->GetImmediateContext(&g_pd3dContext);
+		DLogs(0, "Present Hooked");
+		/*ImGui_ImplDX11_Init(g_hWnd, g_pd3dDevice, g_pd3dContext);
+		inputHook.Init(g_hWnd);*/
 
 		return oPresent(pThis, SyncInterval, Flags);
 	}
+
 	//minimum length size is 12
 	PVOID hookTramp(DWORD64 src, DWORD64 target, DWORD len) {
 		DLogs(1, "Make Trampoline");
